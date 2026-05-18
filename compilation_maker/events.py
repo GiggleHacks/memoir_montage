@@ -8,8 +8,11 @@ Events are simple tuples so the same channel works for CLI (printed) and GUI
     ("counts", done: int, total: int, rate: float, eta: str)
     ("stats", cpu: float, ram: float, gpu: float|None, vram: float|None)
     ("phase", name: str)                         # idle | indexing | compiling | concat
+    ("phase_label", label: str)                  # human-readable current step
+    ("enumerate", found: int, current_dir: str)  # streamed folder walk progress
     ("analysis", path: str, results: dict)       # per-file analyzer outputs
-    ("eligible", count: int)
+    ("eligible", count: int)                     # legacy — kept for back-compat
+    ("stats_index", aggregate: dict)             # full per-folder index stats
     ("done", summary: dict)
 """
 from __future__ import annotations

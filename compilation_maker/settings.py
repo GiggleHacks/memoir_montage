@@ -109,7 +109,22 @@ def resolve_filters(settings: dict) -> dict:
     """
     filters = settings.get("filters", {})
     preset = filters.get("preset")
-    if preset and preset in FILTER_PRESETS:
+    if preset == "custom":
+        # Custom: start from "normal" defaults, then overlay any explicit flags
+        # the user toggled (the UI sends them alongside preset=custom).
+        result = deepcopy(FILTER_PRESETS["normal"])
+        for k in (
+            "talking_required", "source_allowlist_strict",
+            "exclude_vertical", "exclude_downloads", "exclude_low_resolution",
+        ):
+            if k in filters:
+                result[k] = bool(filters[k])
+        if "min_duration" in filters:
+            try:
+                result["min_duration"] = float(filters["min_duration"])
+            except (TypeError, ValueError):
+                pass
+    elif preset and preset in FILTER_PRESETS:
         result = deepcopy(FILTER_PRESETS[preset])
     elif any(isinstance(v, bool) for v in filters.values()):
         result = dict(filters)

@@ -89,6 +89,12 @@ def run_compile(
     if options.get("mute") and audio_mode == "all":
         audio_mode = "mute"
     grid_ramp = bool(options.get("grid_ramp", False))
+    order = str(options.get("order", "chronological")).lower()
+    if order not in ("chronological", "random", "no_repeat"):
+        order = "chronological"
+    # Legacy: the old "no_repeat" checkbox maps onto order="no_repeat".
+    if no_repeat and order == "chronological":
+        order = "no_repeat"
     width, height = options.get("resolution", [1920, 1080])
     fps = int(options.get("fps", 30))
     compile_workers = int(options.get("compile_workers", 0))
@@ -244,40 +250,76 @@ def run_compile(
                 "warn",
             )
 
-    # --- Pre-compute all picks (needed for no_repeat tracking) ---
+    # --- Pre-compute all picks ---
     all_picks: list[list[dict]] = []
-    # Build a shuffled deck of all pool clips for no_repeat mode
-    if no_repeat:
-        deck = list(pool)
-        rng.shuffle(deck)
-        deck_idx = 0
 
-    for k in range(segments):
-        seg_cells = n_per_seg[k] * n_per_seg[k]
-        if no_repeat:
-            picks_src: list = []
-            for _ in range(seg_cells):
-                if deck_idx >= len(deck):
-                    rng.shuffle(deck)
-                    deck_idx = 0
-                picks_src.append(deck[deck_idx])
-                deck_idx += 1
-        elif len(pool) >= seg_cells:
-            picks_src = rng.sample(pool, seg_cells)
+    if order == "chronological":
+        bus.log("Order: chronological — oldest clips first, flowing to newest.", "info")
+        # Sort the pool once by file mtime (fall back to year + path for stability).
+        chrono = sorted(
+            pool,
+            key=lambda e: (e.mtime or 0.0, e.created_year or 0, e.path),
+        )
+        total_needed = sum(seg_n * seg_n for seg_n in n_per_seg)
+        # Build a chronological "deck" the right length, looping the pool if needed.
+        if total_needed <= len(chrono):
+            deck = chrono[:total_needed]
         else:
-            picks_src = rng.choices(pool, k=seg_cells)
+            deck = []
+            while len(deck) < total_needed:
+                deck.extend(chrono)
+            deck = deck[:total_needed]
+        # Walk the deck segment by segment so cell 0 of seg 0 is the earliest clip.
+        idx = 0
+        for k in range(segments):
+            seg_cells = n_per_seg[k] * n_per_seg[k]
+            picks_src = deck[idx:idx + seg_cells]
+            idx += seg_cells
 
-        picks: list[dict] = []
-        for e in picks_src:
-            max_in = max(0.0, e.duration - swap_seconds - 0.1)
-            in_point = rng.uniform(0.0, max_in) if max_in > 0.5 else 0.0
-            picks.append({
-                "path": e.path,
-                "in": in_point,
-                "name": Path(e.path).stem,
-                "year": e.created_year,
-            })
-        all_picks.append(picks)
+            picks: list[dict] = []
+            for e in picks_src:
+                max_in = max(0.0, e.duration - swap_seconds - 0.1)
+                in_point = rng.uniform(0.0, max_in) if max_in > 0.5 else 0.0
+                picks.append({
+                    "path": e.path,
+                    "in": in_point,
+                    "name": Path(e.path).stem,
+                    "year": e.created_year,
+                })
+            all_picks.append(picks)
+    else:
+        # Build a shuffled deck of all pool clips for no_repeat mode
+        if order == "no_repeat":
+            deck = list(pool)
+            rng.shuffle(deck)
+            deck_idx = 0
+
+        for k in range(segments):
+            seg_cells = n_per_seg[k] * n_per_seg[k]
+            if order == "no_repeat":
+                picks_src = []
+                for _ in range(seg_cells):
+                    if deck_idx >= len(deck):
+                        rng.shuffle(deck)
+                        deck_idx = 0
+                    picks_src.append(deck[deck_idx])
+                    deck_idx += 1
+            elif len(pool) >= seg_cells:
+                picks_src = rng.sample(pool, seg_cells)
+            else:
+                picks_src = rng.choices(pool, k=seg_cells)
+
+            picks = []
+            for e in picks_src:
+                max_in = max(0.0, e.duration - swap_seconds - 0.1)
+                in_point = rng.uniform(0.0, max_in) if max_in > 0.5 else 0.0
+                picks.append({
+                    "path": e.path,
+                    "in": in_point,
+                    "name": Path(e.path).stem,
+                    "year": e.created_year,
+                })
+            all_picks.append(picks)
 
     # --- Emit initial ETA estimate based on grid complexity ---
     avg_cells = total_cells_needed / max(1, segments)
@@ -461,6 +503,7 @@ def _render_all_segments(
                 bus.log(f"·  segment {k + 1}/{segments} ({seg_n}×{seg_n})  →  reusing valid render", "info")
 
             bus.emit("current", f"segment {done_count}/{segments}", f"{seg_cells} cells · {swap_seconds}s")
+            bus.emit("phase_label", f"Compiling segment {done_count}/{segments}")
             _emit_compile_progress(bus, done_count, segments, seg_times, started)
 
     return None

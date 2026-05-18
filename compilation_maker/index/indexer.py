@@ -57,9 +57,26 @@ def scan_tree(
     started = time.time()
 
     bus.emit("phase", "indexing")
+    bus.emit("phase_label", "Enumerating")
     bus.log(f"Enumerating videos under {root} …", "info")
-    files = list(iter_videos(root))
+
+    # Streamed enumeration so the UI sees a live count instead of a frozen pane.
+    files: list[Path] = []
+    last_emit = 0.0
+    last_dir: str = ""
+    for p in iter_videos(root):
+        if control.stop.is_set():
+            break
+        files.append(p)
+        parent = str(p.parent)
+        now = time.time()
+        if now - last_emit >= 0.25 or parent != last_dir:
+            bus.emit("enumerate", len(files), parent)
+            last_emit = now
+            last_dir = parent
     total = len(files)
+    bus.emit("enumerate", total, last_dir)
+    bus.emit("phase_label", "Probing")
     bus.log(f"Found {total} videos. Starting scan.", "info")
 
     present: set[str] = set()

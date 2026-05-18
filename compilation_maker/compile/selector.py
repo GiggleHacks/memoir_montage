@@ -15,6 +15,7 @@ class Eligible:
     duration: float
     created_year: int | None
     has_audio: bool = True
+    mtime: float = 0.0  # file mtime from cache — chronological sort key
 
 
 def _norm_root(root: str | Path) -> str:
@@ -100,6 +101,7 @@ def select(
             duration=duration,
             created_year=r["created_year"],
             has_audio=bool(r["has_audio"]),
+            mtime=float(r["mtime"] or 0.0),
         ))
     if report is not None:
         report["counts"] = counts

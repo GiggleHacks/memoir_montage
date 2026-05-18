@@ -310,6 +310,53 @@
         if (v) v.textContent = label != null ? label : Math.round(safe) + "%";
     }
 
+    function setIndeterminateProgress(on) {
+        const bar = $("bar"); if (!bar) return;
+        bar.classList.toggle("indeterminate", !!on);
+        if (on) {
+            $("bar-fill").style.width = "100%";
+            $("bar-pct").textContent = "…";
+        }
+    }
+
+    function renderIndexStats(agg) {
+        const box = $("index-stats"); if (!box) return;
+        if (!agg || !agg.total) {
+            box.hidden = true;
+            return;
+        }
+        box.hidden = false;
+        const eligDur = agg.eligible_duration_seconds || 0;
+        const totDur  = agg.total_duration_seconds || 0;
+        const runtimeEl = $("is-runtime");
+        if (runtimeEl) {
+            runtimeEl.textContent = formatDuration(eligDur);
+            runtimeEl.title = "Eligible runtime: " + formatDuration(eligDur)
+                            + "  ·  total indexed runtime: " + formatDuration(totDur);
+        }
+        const indexedEl = $("is-indexed");
+        if (indexedEl) {
+            indexedEl.textContent = agg.total + (agg.failed ? "  (" + agg.failed + " failed)" : "");
+        }
+        const chips = $("is-chips");
+        if (chips) {
+            chips.innerHTML = "";
+            const defs = [
+                { k: "talking", l: "talk",   cls: "v-talk" },
+                { k: "motion",  l: "motion", cls: "v-motion" },
+                { k: "face",    l: "face",   cls: "v-face" },
+                { k: "nsfw",    l: "nsfw",   cls: "v-nsfw" },
+            ];
+            for (const d of defs) {
+                const n = agg[d.k] || 0;
+                const s = document.createElement("span");
+                s.className = "is-chip " + d.cls;
+                s.textContent = d.l + " " + n;
+                chips.appendChild(s);
+            }
+        }
+    }
+
     /* ---------- phase / log header state ---------- */
     function setPhase(p) {
         state.phase = p;
@@ -347,6 +394,7 @@
             return;
         }
         if (tag === "counts") {
+            setIndeterminateProgress(false);
             const done = ev[1], total = ev[2], rate = ev[3], eta = ev[4];
             const pct = total > 0 ? (done / total) * 100 : 0;
             $("bar-fill").style.width = pct + "%";
@@ -367,8 +415,30 @@
             return;
         }
         if (tag === "phase") { setPhase(ev[1]); return; }
+        if (tag === "phase_label") {
+            const el = $("phase-label");
+            if (el) el.textContent = ev[1] || "";
+            return;
+        }
+        if (tag === "enumerate") {
+            const found = ev[1] || 0;
+            const dir   = ev[2] || "";
+            setIndeterminateProgress(true);
+            $("p-counts").textContent = "found " + found;
+            $("p-rate").textContent   = "";
+            $("p-eta").textContent    = "";
+            $("cur-path").textContent = dir || "scanning…";
+            $("cur-sub").textContent  = "enumerating";
+            const pl = $("phase-label");
+            if (pl) pl.textContent = "Enumerating · " + found + " found";
+            return;
+        }
         if (tag === "eligible") {
             $("eligible-n").textContent = String(ev[1]);
+            return;
+        }
+        if (tag === "stats_index") {
+            renderIndexStats(ev[1] || {});
             return;
         }
         if (tag === "analysis") {
@@ -397,7 +467,12 @@
             talking_required: false, source_allowlist_strict: false,
             exclude_vertical: false, exclude_downloads: false, exclude_low_resolution: false,
         },
+        custom: {
+            talking_required: false, source_allowlist_strict: false,
+            exclude_vertical: true, exclude_downloads: true, exclude_low_resolution: true,
+        },
     };
+    const CUSTOM_LS_KEY = "mm.custom_filters";
     const FILTER_LABELS = {
         talking_required: "TALK", source_allowlist_strict: "CAMERA ONLY",
         exclude_vertical: "NO VERT", exclude_downloads: "NO DOWNLOADS", exclude_low_resolution: "720p+",
@@ -409,9 +484,10 @@
     };
     function renderFilterDetails(preset) {
         const el = $("filter-details"); if (!el) return;
-        const filters = FILTER_PRESETS[preset] || FILTER_PRESETS.strict;
+        const filters = preset === "custom" ? gatherCustomFlags() : (FILTER_PRESETS[preset] || FILTER_PRESETS.strict);
         el.innerHTML = "";
         for (const [key, on] of Object.entries(filters)) {
+            if (typeof on !== "boolean") continue;
             const chip = document.createElement("span");
             chip.className = "fd-chip " + (on ? "on" : "off");
             chip.textContent = FILTER_LABELS[key] || key;
@@ -419,10 +495,46 @@
         }
     }
 
+    function loadCustomFlags() {
+        try {
+            const raw = localStorage.getItem(CUSTOM_LS_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return Object.assign({}, FILTER_PRESETS.custom, { min_duration: 5.5 });
+    }
+    function saveCustomFlags(flags) {
+        try { localStorage.setItem(CUSTOM_LS_KEY, JSON.stringify(flags)); } catch (e) {}
+    }
+    function applyCustomFlagsToUI(flags) {
+        if ($("cf-talking")) $("cf-talking").checked = !!flags.talking_required;
+        if ($("cf-camera"))  $("cf-camera").checked  = !!flags.source_allowlist_strict;
+        if ($("cf-novert"))  $("cf-novert").checked  = !!flags.exclude_vertical;
+        if ($("cf-nodl"))    $("cf-nodl").checked    = !!flags.exclude_downloads;
+        if ($("cf-nolow"))   $("cf-nolow").checked   = !!flags.exclude_low_resolution;
+        if ($("cf-mindur")) {
+            const v = flags.min_duration != null ? flags.min_duration : 5.5;
+            $("cf-mindur").value = String(v);
+        }
+    }
+    function gatherCustomFlags() {
+        return {
+            talking_required:        !!($("cf-talking") && $("cf-talking").checked),
+            source_allowlist_strict: !!($("cf-camera")  && $("cf-camera").checked),
+            exclude_vertical:        !!($("cf-novert")  && $("cf-novert").checked),
+            exclude_downloads:       !!($("cf-nodl")    && $("cf-nodl").checked),
+            exclude_low_resolution:  !!($("cf-nolow")   && $("cf-nolow").checked),
+            min_duration:            parseFloat(($("cf-mindur") && $("cf-mindur").value) || "5.5"),
+        };
+    }
+
     function _setPreset(name) {
         document.querySelectorAll(".preset-btn").forEach(btn => {
             btn.classList.toggle("active", btn.dataset.preset === name);
         });
+        const isCustom = (name === "custom");
+        const panel = $("custom-filters");
+        if (panel) panel.hidden = !isCustom;
+        if (isCustom) applyCustomFlagsToUI(loadCustomFlags());
         renderFilterDetails(name);
     }
 
@@ -461,6 +573,9 @@
         if (o.audio_mode) _setAudioMode(o.audio_mode);
         if (typeof o.grid_ramp      === "boolean" && $("o-ramp")) $("o-ramp").checked = o.grid_ramp;
         if (typeof o.auto_open      === "boolean" && $("o-autoopen")) $("o-autoopen").checked = o.auto_open;
+        if (o.order) _setOrder(o.order);
+        else if (o.no_repeat) _setOrder("no_repeat");
+        else _setOrder("chronological");
         updateRampPreview();
     }
 
@@ -477,10 +592,13 @@
     function gatherFilters() {
         const active = document.querySelector(".preset-btn.active");
         const nsfwActive = document.querySelector(".nsfw-btn.active");
-        return {
-            preset: active ? active.dataset.preset : "strict",
+        const preset = active ? active.dataset.preset : "strict";
+        const out = {
+            preset: preset,
             nsfw_mode: nsfwActive ? nsfwActive.dataset.nsfw : "exclude",
         };
+        if (preset === "custom") Object.assign(out, gatherCustomFlags());
+        return out;
     }
     function buildRampSequence(maxN, segments) {
         // 1, 1, 2, 2, 3, 3, 4, 4, ... up to maxN, then hold maxN
@@ -514,6 +632,8 @@
 
     function gatherOutput() {
         const audioActive = document.querySelector(".audio-btn.active");
+        const orderActive = document.querySelector(".order-btn.active");
+        const order = orderActive ? orderActive.dataset.order : "chronological";
         return {
             grid:           parseInt($("o-grid").value, 10) || 3,
             total_seconds:  parseInt($("o-total").value, 10),
@@ -521,11 +641,25 @@
             border:         $("o-border").checked,
             filename_label: $("o-fname").checked,
             year_label:     $("o-year").checked,
-            no_repeat:      ($("o-norepeat") && $("o-norepeat").checked) ? true : false,
+            order:          order,
+            no_repeat:      (order === "no_repeat"),
             audio_mode:     audioActive ? audioActive.dataset.mode : "all",
             grid_ramp:      ($("o-ramp") && $("o-ramp").checked) ? true : false,
             auto_open:      ($("o-autoopen") && $("o-autoopen").checked) ? true : false,
         };
+    }
+
+    const ORDER_DESCS = {
+        chronological: "Oldest first — your memoir flows from past to present.",
+        random:        "Random selection per segment.",
+        no_repeat:     "Shuffled deck — no clip repeats until the pool is exhausted.",
+    };
+    function _setOrder(name) {
+        document.querySelectorAll(".order-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.order === name);
+        });
+        const d = $("order-desc");
+        if (d) d.textContent = ORDER_DESCS[name] || "";
     }
 
     function setStatusPill(status) {
@@ -743,12 +877,41 @@
         const slider = $("o-total"); if (!slider) return;
         const c = state.constraints;
         if (c && c.available_seconds > 0) {
-            const maxVal = Math.max(10, Math.ceil(c.available_seconds / 5) * 5);
+            // Hard cap on total length: pool size (the "Bitcoin wallet" rule).
+            const maxVal = Math.max(parseInt(slider.min, 10) || 5, Math.floor(c.available_seconds));
             slider.max = String(Math.min(maxVal, 3600));
+            slider.disabled = false;
+            if (parseInt(slider.value, 10) > parseInt(slider.max, 10)) {
+                slider.value = slider.max;
+                syncSlider("o-total");
+            }
             const minEl = $("o-total-min");
             const maxEl = $("o-total-max");
             if (minEl) minEl.textContent = slider.min + "s";
             if (maxEl) maxEl.textContent = fmtSeconds(parseInt(slider.max, 10));
+        } else if (c) {
+            // No pool: disable
+            slider.disabled = true;
+            const maxEl = $("o-total-max");
+            if (maxEl) maxEl.textContent = "0s — index videos first";
+        }
+        updateSwapSliderRange();
+    }
+
+    function updateSwapSliderRange() {
+        const slider = $("o-swap"); if (!slider) return;
+        const c = state.constraints;
+        if (c && c.longest_seconds > 0) {
+            // Swap can't exceed the longest eligible clip (with a small safety margin).
+            const cap = Math.max(1, Math.floor(c.longest_seconds - 0.1));
+            slider.max = String(Math.min(cap, 20));
+            slider.disabled = false;
+            if (parseInt(slider.value, 10) > parseInt(slider.max, 10)) {
+                slider.value = slider.max;
+                syncSlider("o-swap");
+            }
+            const range = slider.parentElement && slider.parentElement.querySelector(".slider-range");
+            if (range) range.lastElementChild.textContent = slider.max + "s";
         }
     }
 
@@ -774,6 +937,23 @@
             btn.addEventListener("click", async () => {
                 _setPreset(btn.dataset.preset);
                 await window.pywebview.api.save_filters(gatherFilters());
+                await refreshConstraints(parseInt($("o-swap").value, 10) || 5);
+            });
+        });
+        ["cf-talking", "cf-camera", "cf-novert", "cf-nodl", "cf-nolow", "cf-mindur"].forEach(id => {
+            const el = $(id); if (!el) return;
+            el.addEventListener("change", async () => {
+                saveCustomFlags(gatherCustomFlags());
+                renderFilterDetails("custom");
+                await window.pywebview.api.save_filters(gatherFilters());
+                await refreshConstraints(parseInt($("o-swap").value, 10) || 5);
+            });
+        });
+        document.querySelectorAll(".order-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                _setOrder(btn.dataset.order);
+                await window.pywebview.api.save_output_options(gatherOutput());
+                validateModal();
             });
         });
         document.querySelectorAll(".nsfw-btn").forEach(btn => {

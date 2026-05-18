@@ -20,7 +20,7 @@ from . import __version__, telemetry
 from .events import Control, EventBus
 from .index.cache import Cache
 from .index.indexer import scan_tree
-from .compile.selector import eligible_count, select
+from .compile.selector import eligible_count, select  # noqa: F401
 from .settings import load as load_settings, save as save_settings, resolve_filters
 
 
@@ -101,8 +101,8 @@ class Api:
         s["last_folder"] = folder
         save_settings(s)
         self._bus.log(f"selected {folder}", "info")
-        # Immediately compute eligible count from current cache (might be 0 on first ever run)
-        self._emit_eligible(folder, s)
+        # Immediately compute eligible stats from current cache (might be 0 on first ever run)
+        self._emit_stats(folder, s)
         return folder
 
     def save_settings(self, payload: dict) -> bool:
@@ -117,10 +117,16 @@ class Api:
 
     def save_filters(self, filters: dict) -> int:
         s = load_settings()
-        s["filters"] = {**s.get("filters", {}), **filters}
+        # Replace filters wholesale (rather than merge) so flipping from a custom
+        # preset back to a named preset doesn't leave stale custom flags around.
+        existing = s.get("filters", {})
+        merged = {"preset": existing.get("preset", "strict"),
+                  "nsfw_mode": existing.get("nsfw_mode", "exclude")}
+        merged.update(filters or {})
+        s["filters"] = merged
         save_settings(s)
         if s.get("last_folder"):
-            return self._emit_eligible(s["last_folder"], s)
+            return self._emit_stats(s["last_folder"], s)
         return 0
 
     def save_output_options(self, output: dict) -> bool:
@@ -147,7 +153,7 @@ class Api:
                 self._bus.log(f"index crashed: {e}", "err")
             finally:
                 if s.get("last_folder"):
-                    self._emit_eligible(s["last_folder"], s)
+                    self._emit_stats(s["last_folder"], s)
 
         self._worker = threading.Thread(target=_run, daemon=True, name="indexer")
         self._worker.start()
@@ -315,15 +321,33 @@ class Api:
         except Exception as e:
             self._bus.log(f"Could not auto-open: {e}", "warn")
 
-    def _emit_eligible(self, folder: str, settings: dict) -> int:
+    def _emit_stats(self, folder: str, settings: dict) -> int:
+        """Emit the full aggregate (eligible count + totals + per-filter breakdown)."""
         if self._cache is None:
             return 0
         try:
             filters = resolve_filters(settings)
-            n = eligible_count(self._cache, folder, filters=filters, thresholds=settings["thresholds"])
+            thresholds = settings["thresholds"]
+            agg = self._cache.aggregate(
+                folder,
+                nsfw_strict=float(thresholds.get("nsfw_strict", 0.70)),
+                nsfw_soft_min=int(thresholds.get("nsfw_soft_min_frames", 3)),
+                speech_min=float(thresholds.get("speech_fraction_min", 0.10)),
+                motion_min=float(thresholds.get("motion_score_min", 0.02)),
+                min_duration=float(filters.get("min_duration", 5.5)),
+            )
+            # eligible from aggregate is heuristic (no source-filter logic);
+            # use the precise selector count for the headline number.
+            n = eligible_count(self._cache, folder, filters=filters, thresholds=thresholds)
+            agg["eligible"] = n
+            # Total runtime of just the eligible clips:
+            elig = select(self._cache, folder, filters=filters, thresholds=thresholds)
+            agg["eligible_duration_seconds"] = sum(e.duration for e in elig)
         except Exception as e:
-            self._bus.log(f"eligible recount failed: {e}", "err")
+            self._bus.log(f"stats recount failed: {e}", "err")
             return 0
+        self._bus.emit("stats_index", agg)
+        # Backward-compat: also emit the bare eligible event so older JS still works.
         self._bus.emit("eligible", n)
         return n
 

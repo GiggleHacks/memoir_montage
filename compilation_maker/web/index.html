@@ -105,6 +105,7 @@
                 <button class="preset-btn active" data-preset="strict">STRICT</button>
                 <button class="preset-btn" data-preset="normal">NORMAL</button>
                 <button class="preset-btn" data-preset="off">OFF</button>
+                <button class="preset-btn" data-preset="custom" title="Pick individual filters.">CUSTOM</button>
             </div>
 
             <div class="nsfw-mode-bar">
@@ -116,9 +117,24 @@
 
             <div class="filter-details" id="filter-details"></div>
 
+            <div class="custom-filters" id="custom-filters" hidden>
+                <label class="cf-row" title="Require detected speech to keep a clip."><input type="checkbox" id="cf-talking"><span>require talking</span></label>
+                <label class="cf-row" title="Keep only filenames that look like camera footage (gopro/iphone/android/dslr)."><input type="checkbox" id="cf-camera"><span>camera only</span></label>
+                <label class="cf-row" title="Drop vertical (portrait) videos."><input type="checkbox" id="cf-novert"><span>exclude vertical</span></label>
+                <label class="cf-row" title="Drop filenames that look like tiktok/youtube/twitter downloads."><input type="checkbox" id="cf-nodl"><span>exclude downloads</span></label>
+                <label class="cf-row" title="Drop low-resolution clips."><input type="checkbox" id="cf-nolow"><span>exclude low-res</span></label>
+                <label class="cf-row cf-num" title="Minimum clip length in seconds."><span>min duration</span><input type="number" id="cf-mindur" min="0" max="60" step="0.5" value="5.5"><span class="cf-unit">s</span></label>
+            </div>
+
             <div class="eligible-readout" title="Videos that currently pass all enabled filters.">
                 <span class="eligible-n" id="eligible-n">—</span>
                 <span class="eligible-l">eligible</span>
+            </div>
+
+            <div class="index-stats" id="index-stats" hidden>
+                <div class="is-row"><span class="is-l">total runtime</span><span class="is-v" id="is-runtime">—</span></div>
+                <div class="is-row"><span class="is-l">indexed files</span><span class="is-v" id="is-indexed">—</span></div>
+                <div class="is-chips" id="is-chips"></div>
             </div>
         </div>
     </aside>
@@ -156,8 +172,9 @@
             </div>
             <div class="cur-path" id="cur-path">—</div>
             <div class="cur-sub" id="cur-sub"></div>
+            <div class="phase-label" id="phase-label"></div>
             <div class="progress">
-                <div class="bar"><div class="bar-fill" id="bar-fill"></div><div class="bar-pct" id="bar-pct">0 %</div></div>
+                <div class="bar" id="bar"><div class="bar-fill" id="bar-fill"></div><div class="bar-pct" id="bar-pct">0 %</div></div>
                 <div class="progress-meta">
                     <span id="p-counts">0 / 0</span>
                     <span id="p-rate">— /s</span>
@@ -275,7 +292,17 @@
                 </div>
             </div>
 
-            <label class="check" title="Never use the same clip twice across the entire compilation. If the pool is too small, remaining cells are filled with repeats.">
+            <div class="order-box" title="How clips are picked for cells across the output.">
+                <div class="order-h">ORDER</div>
+                <div class="order-bar">
+                    <button class="order-btn active" data-order="chronological" title="Oldest clips first — within each segment, cells go earliest→latest; segments flow oldest→newest.">CHRONOLOGICAL</button>
+                    <button class="order-btn" data-order="random" title="Random selection per segment.">RANDOM</button>
+                    <button class="order-btn" data-order="no_repeat" title="Shuffled deck — no clip repeats until the pool is exhausted.">NO REPEAT</button>
+                </div>
+                <div class="order-desc" id="order-desc">Oldest first — your memoir flows from past to present.</div>
+            </div>
+
+            <label class="check" hidden title="Legacy: enabled by the NO REPEAT order option.">
                 <input type="checkbox" id="o-norepeat">
                 <span class="check-label">no repeat clips</span>
             </label>
