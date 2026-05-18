@@ -3,6 +3,13 @@
 All notable changes to memoir_montage. Bump the version in `pyproject.toml` and
 `compilation_maker/__init__.py` for every user-facing change.
 
+## 0.12.2 — 2026-05-18
+- Fix Windows `OSError: [WinError 206] The filename or extension is too long`
+  on big grids (especially the ramp peak at 8×8+). The filtergraph is now
+  written to a temp file and passed via `-filter_complex_script` whenever it
+  would push the command line past ~6kB, so we stay well under Windows's
+  32k CreateProcess limit. The temp file is removed after the segment renders.
+
 ## 0.12.1 — 2026-05-18
 - Filter checkboxes are always visible and reflect the active preset
   (Strict/Normal/Off update them live). Toggling any checkbox flips the

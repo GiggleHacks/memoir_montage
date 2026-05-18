@@ -75,7 +75,20 @@ def render_segment(
         output_w=output_w, output_h=output_h,
     )
 
-    cmd += ["-filter_complex", filtergraph, "-map", "[v]"]
+    # Big grids (esp. grid ramp peaks) produce filtergraphs that blow past the
+    # Windows ~32k command-line limit. For anything large, write it to a file
+    # and use -filter_complex_script. The threshold is conservative — every
+    # ffmpeg build that supports complex graphs also supports the _script form.
+    if len(filtergraph) > 6000:
+        graph_file = seg_path.with_suffix(".filter.txt")
+        try:
+            graph_file.write_text(filtergraph, encoding="utf-8")
+        except OSError as e:
+            return False, f"could not write filtergraph: {e}"
+        cmd += ["-filter_complex_script", str(graph_file), "-map", "[v]"]
+    else:
+        graph_file = None
+        cmd += ["-filter_complex", filtergraph, "-map", "[v]"]
     if want_audio:
         cmd += [
             "-map", "[a]",
@@ -106,6 +119,12 @@ def render_segment(
         return False, "ffmpeg timed out"
     except OSError as e:
         return False, f"OSError: {e}"
+    finally:
+        if graph_file is not None:
+            try:
+                graph_file.unlink()
+            except OSError:
+                pass
 
     if control.stop.is_set():
         # User cancelled; remove the partial file if it exists.
