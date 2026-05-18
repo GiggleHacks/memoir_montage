@@ -52,8 +52,11 @@ def render_segment(
     cmd: list[str] = [ffmpeg, "-hide_banner", "-loglevel", "error", "-y", "-nostdin"]
 
     # Input-side seeks (-ss before -i) for fast keyframe seeks.
+    # +discardcorrupt + ignore_err lets one flaky clip not kill the whole segment.
     for p in picks:
         cmd += [
+            "-fflags", "+discardcorrupt+genpts",
+            "-err_detect", "ignore_err",
             "-ss", f"{float(p.get('in', 0.0)):.3f}",
             "-t", str(swap_seconds),
             "-i", str(p["path"]),
@@ -137,6 +140,10 @@ def render_segment(
 
     if proc.returncode != 0:
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
+        # On failure, also dump the input paths so the user can find the bad clip.
+        bus.log(f"Segment used {len(picks)} input(s):", "err")
+        for i, p in enumerate(picks):
+            bus.log(f"   [{i}]  {p.get('path', '?')}", "err")
         # Keep the last 800 chars so the GUI log can show enough context
         return False, stderr[-800:].strip()
     if not seg_path.exists() or seg_path.stat().st_size == 0:

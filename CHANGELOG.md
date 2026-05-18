@@ -3,6 +3,13 @@
 All notable changes to memoir_montage. Bump the version in `pyproject.toml` and
 `compilation_maker/__init__.py` for every user-facing change.
 
+## 0.12.3 — 2026-05-18
+- When a segment render fails, the activity log now lists every input clip
+  used in that segment so you can isolate the bad file.
+- Add `-fflags +discardcorrupt+genpts` and `-err_detect ignore_err` to inputs
+  so one flaky clip is more likely to be skipped instead of killing the
+  whole segment.
+
 ## 0.12.2 — 2026-05-18
 - Fix Windows `OSError: [WinError 206] The filename or extension is too long`
   on big grids (especially the ramp peak at 8×8+). The filtergraph is now
