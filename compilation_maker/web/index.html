@@ -115,15 +115,38 @@
                 <button class="nsfw-btn" data-nsfw="only" title="ONLY include NSFW content.">ONLY</button>
             </div>
 
-            <div class="filter-details" id="filter-details"></div>
+            <div class="filter-details" id="filter-details" hidden></div>
 
-            <div class="custom-filters" id="custom-filters" hidden>
-                <label class="cf-row" title="Require detected speech to keep a clip."><input type="checkbox" id="cf-talking"><span>require talking</span></label>
-                <label class="cf-row" title="Keep only filenames that look like camera footage (gopro/iphone/android/dslr)."><input type="checkbox" id="cf-camera"><span>camera only</span></label>
-                <label class="cf-row" title="Drop vertical (portrait) videos."><input type="checkbox" id="cf-novert"><span>exclude vertical</span></label>
-                <label class="cf-row" title="Drop filenames that look like tiktok/youtube/twitter downloads."><input type="checkbox" id="cf-nodl"><span>exclude downloads</span></label>
-                <label class="cf-row" title="Drop low-resolution clips."><input type="checkbox" id="cf-nolow"><span>exclude low-res</span></label>
-                <label class="cf-row cf-num" title="Minimum clip length in seconds."><span>min duration</span><input type="number" id="cf-mindur" min="0" max="60" step="0.5" value="5.5"><span class="cf-unit">s</span></label>
+            <div class="filter-grid" id="filter-grid">
+                <label class="filt-row" title="Require detected speech to keep a clip.">
+                    <input type="checkbox" id="cf-talking">
+                    <span class="filt-l">require talking</span>
+                </label>
+                <label class="filt-row" title="Keep only filenames that look like camera footage (gopro/iphone/android/dslr).">
+                    <input type="checkbox" id="cf-camera">
+                    <span class="filt-l">camera only</span>
+                </label>
+                <label class="filt-row" title="Drop vertical (portrait) videos.">
+                    <input type="checkbox" id="cf-novert">
+                    <span class="filt-l">exclude vertical</span>
+                </label>
+                <label class="filt-row" title="Drop filenames that look like tiktok/youtube/twitter downloads.">
+                    <input type="checkbox" id="cf-nodl">
+                    <span class="filt-l">exclude downloads</span>
+                </label>
+                <label class="filt-row" title="Drop low-resolution clips.">
+                    <input type="checkbox" id="cf-nolow">
+                    <span class="filt-l">exclude low-res</span>
+                </label>
+            </div>
+
+            <div class="filt-slider-group" title="Minimum clip length in seconds.">
+                <div class="filt-slider-head">
+                    <span class="filt-l">min duration</span>
+                    <span class="filt-slider-val" id="cf-mindur-val">5.5 s</span>
+                </div>
+                <input type="range" id="cf-mindur" min="0" max="30" step="0.5" value="5.5" class="slider">
+                <div class="slider-range"><span>0 s</span><span>30 s</span></div>
             </div>
 
             <div class="eligible-readout" title="Videos that currently pass all enabled filters.">

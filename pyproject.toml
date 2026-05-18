@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compilation-maker"
-version = "0.12.0"
+version = "0.12.1"
 description = "Generate NxN simultaneous-playback video collages from a folder of personal videos, with smart pre-filtering."
 requires-python = ">=3.10"
 authors = [{ name = "qx" }]

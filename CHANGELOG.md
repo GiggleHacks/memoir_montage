@@ -3,6 +3,14 @@
 All notable changes to memoir_montage. Bump the version in `pyproject.toml` and
 `compilation_maker/__init__.py` for every user-facing change.
 
+## 0.12.1 — 2026-05-18
+- Filter checkboxes are always visible and reflect the active preset
+  (Strict/Normal/Off update them live). Toggling any checkbox flips the
+  preset to Custom and persists the selection.
+- Filter panel re-laid out as an even two-column grid for alignment.
+- Min duration is now a slider (0–30s, 0.5s steps) with a live readout
+  instead of a number input.
+
 ## 0.12.0 — 2026-05-18
 - Custom filter preset with per-toggle controls (e.g. Camera Only without Talking).
 - Full index statistics: total runtime, indexed/failed counts, per-filter breakdown.

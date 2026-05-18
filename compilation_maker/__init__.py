@@ -1,4 +1,4 @@
-__version__ = "0.12.0"
+__version__ = "0.12.1"
 APP_NAME = "CompilationMaker"
 
 # When you make a user-facing change to Memoir Montage, bump __version__ above.

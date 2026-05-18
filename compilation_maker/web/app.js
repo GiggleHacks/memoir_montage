@@ -482,19 +482,6 @@
         mute: "No audio — output will be completely silent.",
         solo: "One clip at a time — cycles through the grid with a gold highlight.",
     };
-    function renderFilterDetails(preset) {
-        const el = $("filter-details"); if (!el) return;
-        const filters = preset === "custom" ? gatherCustomFlags() : (FILTER_PRESETS[preset] || FILTER_PRESETS.strict);
-        el.innerHTML = "";
-        for (const [key, on] of Object.entries(filters)) {
-            if (typeof on !== "boolean") continue;
-            const chip = document.createElement("span");
-            chip.className = "fd-chip " + (on ? "on" : "off");
-            chip.textContent = FILTER_LABELS[key] || key;
-            el.appendChild(chip);
-        }
-    }
-
     function loadCustomFlags() {
         try {
             const raw = localStorage.getItem(CUSTOM_LS_KEY);
@@ -505,7 +492,7 @@
     function saveCustomFlags(flags) {
         try { localStorage.setItem(CUSTOM_LS_KEY, JSON.stringify(flags)); } catch (e) {}
     }
-    function applyCustomFlagsToUI(flags) {
+    function applyFlagsToUI(flags) {
         if ($("cf-talking")) $("cf-talking").checked = !!flags.talking_required;
         if ($("cf-camera"))  $("cf-camera").checked  = !!flags.source_allowlist_strict;
         if ($("cf-novert"))  $("cf-novert").checked  = !!flags.exclude_vertical;
@@ -514,6 +501,7 @@
         if ($("cf-mindur")) {
             const v = flags.min_duration != null ? flags.min_duration : 5.5;
             $("cf-mindur").value = String(v);
+            syncMinDurLabel();
         }
     }
     function gatherCustomFlags() {
@@ -526,16 +514,28 @@
             min_duration:            parseFloat(($("cf-mindur") && $("cf-mindur").value) || "5.5"),
         };
     }
+    function syncMinDurLabel() {
+        const el = $("cf-mindur-val"); const inp = $("cf-mindur");
+        if (el && inp) el.textContent = parseFloat(inp.value).toFixed(1) + " s";
+    }
 
     function _setPreset(name) {
         document.querySelectorAll(".preset-btn").forEach(btn => {
             btn.classList.toggle("active", btn.dataset.preset === name);
         });
-        const isCustom = (name === "custom");
-        const panel = $("custom-filters");
-        if (panel) panel.hidden = !isCustom;
-        if (isCustom) applyCustomFlagsToUI(loadCustomFlags());
-        renderFilterDetails(name);
+        // Checkboxes always reflect what the active preset enables. For Custom,
+        // we pull the user's saved selections; for the named presets we mirror
+        // the preset definition (with min_duration baked in).
+        let flags;
+        if (name === "custom") {
+            flags = loadCustomFlags();
+        } else {
+            const p = FILTER_PRESETS[name] || FILTER_PRESETS.strict;
+            flags = Object.assign({}, p, {
+                min_duration: name === "off" ? 0 : 5.5,
+            });
+        }
+        applyFlagsToUI(flags);
     }
 
     function _setNsfwMode(mode) {
@@ -940,14 +940,25 @@
                 await refreshConstraints(parseInt($("o-swap").value, 10) || 5);
             });
         });
-        ["cf-talking", "cf-camera", "cf-novert", "cf-nodl", "cf-nolow", "cf-mindur"].forEach(id => {
+        const filterInputs = ["cf-talking", "cf-camera", "cf-novert", "cf-nodl", "cf-nolow", "cf-mindur"];
+        filterInputs.forEach(id => {
             const el = $(id); if (!el) return;
-            el.addEventListener("change", async () => {
+            const onTouch = async () => {
+                // Any manual change flips the preset to Custom and remembers
+                // the full snapshot of checkboxes/slider.
+                const active = document.querySelector(".preset-btn.active");
+                if (!active || active.dataset.preset !== "custom") {
+                    document.querySelectorAll(".preset-btn").forEach(b => {
+                        b.classList.toggle("active", b.dataset.preset === "custom");
+                    });
+                }
                 saveCustomFlags(gatherCustomFlags());
-                renderFilterDetails("custom");
+                syncMinDurLabel();
                 await window.pywebview.api.save_filters(gatherFilters());
                 await refreshConstraints(parseInt($("o-swap").value, 10) || 5);
-            });
+            };
+            el.addEventListener("change", onTouch);
+            if (id === "cf-mindur") el.addEventListener("input", syncMinDurLabel);
         });
         document.querySelectorAll(".order-btn").forEach(btn => {
             btn.addEventListener("click", async () => {

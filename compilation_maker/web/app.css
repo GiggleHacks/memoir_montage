@@ -1186,25 +1186,53 @@ select { width: 92px; text-align: left; text-align-last: left; }
 .tele-vram .mini-v { color: var(--accent-magenta); }
 .tele-vram .mini-seg .cell.on { background: var(--accent-magenta); border-color: var(--accent-magenta); }
 
-/* ---------- v0.12 additions: custom filters, stats, phase label, order, pulse ---------- */
-.custom-filters {
-    display: flex; flex-direction: column; gap: 6px;
-    padding: 8px 10px; margin-top: 8px;
-    background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px;
+/* ---------- v0.12 additions: filter grid, stats, phase label, order, pulse ---------- */
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
 }
-.custom-filters .cf-row {
+.filter-grid .filt-row {
     display: flex; align-items: center; gap: 8px;
     font-family: var(--mono); font-size: 12px; color: var(--text);
     cursor: pointer;
+    padding: 2px 0;
+    min-height: 22px;
 }
-.custom-filters .cf-row input[type="checkbox"] { accent-color: var(--accent-purple); }
-.custom-filters .cf-num { gap: 6px; }
-.custom-filters .cf-num input[type="number"] {
-    width: 56px; background: var(--bg-input-hi); color: var(--text);
-    border: 1px solid var(--border); border-radius: 3px; padding: 2px 4px;
-    font-family: var(--mono); font-size: 12px;
+.filter-grid .filt-row input[type="checkbox"] {
+    accent-color: var(--accent-purple);
+    width: 14px; height: 14px;
+    margin: 0;
+    flex-shrink: 0;
 }
-.custom-filters .cf-unit { color: var(--text-dim); }
+.filter-grid .filt-l { flex: 1; }
+
+.filt-slider-group {
+    margin-top: 8px;
+    padding: 8px 12px 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.filt-slider-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    margin-bottom: 4px;
+}
+.filt-slider-val {
+    color: var(--accent-purple); font-weight: 500;
+}
+.filt-slider-group .slider { width: 100%; }
+.filt-slider-group .slider-range {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+    margin-top: 2px;
+}
 
 .index-stats {
     margin-top: 8px; padding: 8px 10px;
