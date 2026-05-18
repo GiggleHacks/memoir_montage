@@ -99,8 +99,11 @@ def run_compile(
     fps = int(options.get("fps", 30))
     compile_workers = int(options.get("compile_workers", 0))
 
-    if n < 2 or n > 20:
-        bus.log(f"Grid size {n} out of range (2-20).", "err")
+    # Cap at 6: 7+ (49+ simultaneous decodes + xstack + amix) blows up ffmpeg
+    # on Windows with "Generic error in an external library". Track it and lift
+    # the cap once we have a safer multi-pass path.
+    if n < 2 or n > 6:
+        bus.log(f"Grid size {n} out of range (2-6).", "err")
         bus.emit("phase", "idle")
         return {"error": "bad_options"}
 

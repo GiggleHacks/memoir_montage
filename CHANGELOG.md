@@ -3,6 +3,13 @@
 All notable changes to memoir_montage. Bump the version in `pyproject.toml` and
 `compilation_maker/__init__.py` for every user-facing change.
 
+## 0.12.4 — 2026-05-18
+- Cap grid size at 6×6 (36 cells). 7×7 and larger reliably crash ffmpeg with
+  "Generic error in an external library" — too many simultaneous decodes +
+  xstack + amix inputs for a single ffmpeg invocation. Until we add a
+  multi-pass / pre-rendered tile path, only safe grids are exposed.
+- Add 2×2 as the new floor option.
+
 ## 0.12.3 — 2026-05-18
 - When a segment render fails, the activity log now lists every input clip
   used in that segment so you can isolate the bad file.

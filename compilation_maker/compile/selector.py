@@ -181,7 +181,7 @@ def compile_constraints(
     swap_seconds: float,
     mute: bool = False,
     audio_mode: str = "",
-    grid_options: Iterable[int] = (3, 4, 5, 6, 7, 8, 9, 10),
+    grid_options: Iterable[int] = (2, 3, 4, 5, 6),
 ) -> dict:
     """Bundle pool stats + grid feasibility + a recommended config for the modal."""
     stats = pool_stats(cache, root, filters=filters, thresholds=thresholds,

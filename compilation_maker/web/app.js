@@ -13,7 +13,7 @@
         constraints: null,  // last compile_constraints() result
     };
     const LOG_MAX = 500;
-    const GRID_OPTIONS = [3, 4, 5, 6, 7, 8, 9, 10];
+    const GRID_OPTIONS = [2, 3, 4, 5, 6];  // 7+ overwhelms ffmpeg on Windows — see CHANGELOG
 
     /* file-extension → CSS path class. Per spec. */
     const EXT_CLASS = {
