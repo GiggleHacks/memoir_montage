@@ -244,14 +244,41 @@ def run_compile(
     used_paths: set[str] = set()
 
     total_cells_needed = sum(seg_n * seg_n for seg_n in n_per_seg)
-    if no_repeat:
-        bus.log(f"No-repeat mode: {len(pool)} unique clips for {total_cells_needed} total cells.", "info")
-        if total_cells_needed > len(pool):
+
+    # For chronological and no_repeat, *never* let a clip repeat. If the pool
+    # can't fill the requested length, trim segments off the end so we use the
+    # pool exactly once. (Random keeps the wrap behavior since it's random.)
+    if order in ("chronological", "no_repeat") and total_cells_needed > len(pool):
+        cumulative = 0
+        new_n_per_seg: list[int] = []
+        for seg_n in n_per_seg:
+            cells = seg_n * seg_n
+            if cumulative + cells > len(pool):
+                break
+            new_n_per_seg.append(seg_n)
+            cumulative += cells
+        if not new_n_per_seg:
             bus.log(
-                f"⚠ Pool has fewer clips ({len(pool)}) than cells needed ({total_cells_needed}). "
-                f"Clips will be reused after the pool is exhausted.",
+                f"Pool too small ({len(pool)} clip(s)) for one {n_per_seg[0]}×{n_per_seg[0]} segment. "
+                f"Lower the grid size or loosen filters.",
+                "err",
+            )
+            bus.emit("phase", "idle")
+            return {"error": "pool_too_small"}
+        dropped = len(n_per_seg) - len(new_n_per_seg)
+        if dropped:
+            bus.log(
+                f"⚠ Pool ({len(pool)}) smaller than requested ({total_cells_needed} cells). "
+                f"Trimmed {dropped} segment(s) so no clip repeats — output will be "
+                f"{len(new_n_per_seg) * swap_seconds}s instead of {segments * swap_seconds}s.",
                 "warn",
             )
+            n_per_seg = new_n_per_seg
+            segments = len(n_per_seg)
+            total_cells_needed = cumulative
+
+    if no_repeat:
+        bus.log(f"No-repeat mode: {len(pool)} unique clips for {total_cells_needed} total cells.", "info")
 
     # --- Pre-compute all picks ---
     all_picks: list[list[dict]] = []
@@ -263,15 +290,8 @@ def run_compile(
             pool,
             key=lambda e: (e.mtime or 0.0, e.created_year or 0, e.path),
         )
-        total_needed = sum(seg_n * seg_n for seg_n in n_per_seg)
-        # Build a chronological "deck" the right length, looping the pool if needed.
-        if total_needed <= len(chrono):
-            deck = chrono[:total_needed]
-        else:
-            deck = []
-            while len(deck) < total_needed:
-                deck.extend(chrono)
-            deck = deck[:total_needed]
+        # total_cells_needed is guaranteed <= len(pool) by the trim above.
+        deck = chrono[:total_cells_needed]
         # Walk the deck segment by segment so cell 0 of seg 0 is the earliest clip.
         idx = 0
         for k in range(segments):
@@ -291,7 +311,8 @@ def run_compile(
                 })
             all_picks.append(picks)
     else:
-        # Build a shuffled deck of all pool clips for no_repeat mode
+        # no_repeat: shuffle once and walk through. After the trim above, the
+        # deck is guaranteed long enough to fill every segment without wrapping.
         if order == "no_repeat":
             deck = list(pool)
             rng.shuffle(deck)
@@ -300,13 +321,8 @@ def run_compile(
         for k in range(segments):
             seg_cells = n_per_seg[k] * n_per_seg[k]
             if order == "no_repeat":
-                picks_src = []
-                for _ in range(seg_cells):
-                    if deck_idx >= len(deck):
-                        rng.shuffle(deck)
-                        deck_idx = 0
-                    picks_src.append(deck[deck_idx])
-                    deck_idx += 1
+                picks_src = deck[deck_idx:deck_idx + seg_cells]
+                deck_idx += seg_cells
             elif len(pool) >= seg_cells:
                 picks_src = rng.sample(pool, seg_cells)
             else:

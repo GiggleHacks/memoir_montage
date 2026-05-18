@@ -3,6 +3,14 @@
 All notable changes to memoir_montage. Bump the version in `pyproject.toml` and
 `compilation_maker/__init__.py` for every user-facing change.
 
+## 0.12.5 — 2026-05-18
+- Chronological and No-Repeat modes now strictly never repeat a clip. If the
+  pool can't fill the requested length, segments are trimmed off the end
+  (output gets shorter) instead of looping back to the start of the pool.
+  A warning is logged showing the actual output length vs requested.
+- Random mode keeps the wrap-and-reuse behavior since repeats are expected
+  there.
+
 ## 0.12.4 — 2026-05-18
 - Cap grid size at 6×6 (36 cells). 7×7 and larger reliably crash ffmpeg with
   "Generic error in an external library" — too many simultaneous decodes +
