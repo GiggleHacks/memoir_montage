@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>MEMOIR_MONTAGE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- ============= top bar ============= -->
+<header class="topbar">
+    <div class="brand">
+        <svg class="ico ico-monitor" viewBox="0 0 16 16" aria-hidden="true">
+            <rect x="1" y="2" width="14" height="9" fill="#c0c0c0"/>
+            <rect x="2" y="3" width="12" height="7" fill="#5fc6ff"/>
+            <rect x="2" y="3" width="12" height="1" fill="#3a86c0"/>
+            <rect x="6" y="11" width="4" height="2" fill="#a0a0a0"/>
+            <rect x="4" y="13" width="8" height="1" fill="#808080"/>
+            <rect x="1" y="2" width="14" height="1" fill="#fff"/>
+            <rect x="1" y="11" width="1" height="-9" fill="#fff"/>
+        </svg>
+        <span class="title">MEMOIR<span class="title-sep">_</span>MONTAGE</span>
+        <span class="ver" id="app-ver">v—</span>
+    </div>
+    <div class="topright">
+        <span class="folderpath" id="folderpath" title="Currently selected folder">no folder selected</span>
+    </div>
+</header>
+
+<!-- ============= main two-column layout ============= -->
+<main class="layout">
+
+    <!-- ----- LEFT column: source + actions + filters ----- -->
+    <aside class="panel side">
+        <h2 class="panel-h">
+            <svg class="ico ico-sm" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="3" width="14" height="11" fill="#c0c0c0"/>
+                <rect x="1" y="3" width="14" height="1" fill="#fff"/>
+                <rect x="1" y="3" width="1" height="11" fill="#fff"/>
+                <rect x="14" y="3" width="1" height="11" fill="#666"/>
+                <rect x="1" y="13" width="14" height="1" fill="#666"/>
+                <rect x="3" y="6" width="10" height="1" fill="#000"/>
+                <rect x="3" y="9" width="10" height="1" fill="#000"/>
+            </svg>
+            <span>SOURCE</span>
+        </h2>
+
+        <div class="block">
+            <button class="btn ghost wide" id="btn-folder"
+                    title="Pick a folder to scan. The tool recurses into subfolders.">
+                <svg class="ico ico-folder" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="1" y="4" width="6" height="2" fill="#dfa514"/>
+                    <rect x="1" y="5" width="14" height="9" fill="#ffd97a"/>
+                    <rect x="1" y="5" width="14" height="1" fill="#fff"/>
+                    <rect x="1" y="5" width="1" height="9" fill="#fff"/>
+                    <rect x="14" y="5" width="1" height="9" fill="#a07000"/>
+                    <rect x="1" y="13" width="14" height="1" fill="#a07000"/>
+                </svg>
+                <span>SELECT FOLDER</span>
+            </button>
+            <input type="text" class="folder-readout" id="folder-readout" readonly value="—" title="Currently selected folder">
+
+            <div class="actions">
+                <button class="btn primary wide" id="btn-index"
+                        title="Walk the selected folder and analyze every video. Cached after first run.">
+                    <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                        <circle cx="6.5" cy="6.5" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="9.5" y1="9.5" x2="14" y2="14" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    <span>INDEX</span>
+                </button>
+                <button class="btn compile wide" id="btn-compile"
+                        title="Open the compile dialog and render an NxN collage.">
+                    <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                        <rect x="1" y="3" width="14" height="10" fill="currentColor" opacity="0.16"/>
+                        <rect x="1" y="3" width="14" height="2" fill="currentColor"/>
+                        <rect x="3" y="3" width="1" height="2" fill="#000"/>
+                        <rect x="6" y="3" width="1" height="2" fill="#000"/>
+                        <rect x="9" y="3" width="1" height="2" fill="#000"/>
+                        <rect x="12" y="3" width="1" height="2" fill="#000"/>
+                        <polygon points="6,7 6,11 11,9" fill="currentColor"/>
+                    </svg>
+                    <span>COMPILE</span>
+                </button>
+                <button class="btn danger wide" id="btn-cancel" disabled
+                        title="Stop the current operation. Indexed videos so far will be available for compile.">
+                    <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                        <rect x="3" y="3" width="10" height="10" fill="currentColor"/>
+                    </svg>
+                    <span>STOP</span>
+                </button>
+            </div>
+        </div>
+
+        <h2 class="panel-h panel-h-2nd">
+            <svg class="ico ico-xs" viewBox="0 0 16 16" aria-hidden="true">
+                <polygon points="2,3 14,3 10,8 10,13 6,11 6,8" fill="#5fc6ff" stroke="#000" stroke-width="0.5"/>
+            </svg>
+            <span>FILTERS</span>
+        </h2>
+
+        <div class="block">
+            <div class="preset-bar">
+                <button class="preset-btn active" data-preset="strict">STRICT</button>
+                <button class="preset-btn" data-preset="normal">NORMAL</button>
+                <button class="preset-btn" data-preset="off">OFF</button>
+            </div>
+
+            <div class="nsfw-mode-bar">
+                <span class="nsfw-mode-h">NSFW</span>
+                <button class="nsfw-btn active" data-nsfw="exclude" title="Skip NSFW content.">EXCLUDE</button>
+                <button class="nsfw-btn" data-nsfw="off" title="Don't filter on NSFW at all.">OFF</button>
+                <button class="nsfw-btn" data-nsfw="only" title="ONLY include NSFW content.">ONLY</button>
+            </div>
+
+            <div class="filter-details" id="filter-details"></div>
+
+            <div class="eligible-readout" title="Videos that currently pass all enabled filters.">
+                <span class="eligible-n" id="eligible-n">—</span>
+                <span class="eligible-l">eligible</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ----- RIGHT column: activity log ----- -->
+    <section class="panel center">
+        <div class="log-frame">
+            <div class="log-header">
+                <div class="log-h-left">
+                    <span class="led" id="rec" title="Recording indicator — pulses while a scan or compile is running"></span>
+                    <span class="log-status" id="log-status">IDLE</span>
+                </div>
+                <div class="log-h-title">ACTIVITY LOG</div>
+                <div class="log-h-right">
+                    <span class="log-counter" id="log-counter">0 events</span>
+                </div>
+            </div>
+            <div class="log" id="log"></div>
+        </div>
+
+        <div class="current" title="The file currently being analyzed and overall progress.">
+            <div class="cur-label">
+                <svg class="ico ico-xs" viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="3" y="2" width="10" height="12" fill="#c0c0c0"/>
+                    <rect x="3" y="2" width="10" height="1" fill="#fff"/>
+                    <rect x="3" y="2" width="1" height="12" fill="#fff"/>
+                    <rect x="12" y="2" width="1" height="12" fill="#666"/>
+                    <rect x="3" y="13" width="10" height="1" fill="#666"/>
+                    <rect x="5" y="4" width="6" height="1" fill="#000"/>
+                    <rect x="5" y="6" width="6" height="1" fill="#000"/>
+                    <rect x="5" y="8" width="6" height="1" fill="#000"/>
+                    <rect x="5" y="10" width="4" height="1" fill="#000"/>
+                </svg>
+                <span>CURRENT</span>
+            </div>
+            <div class="cur-path" id="cur-path">—</div>
+            <div class="cur-sub" id="cur-sub"></div>
+            <div class="progress">
+                <div class="bar"><div class="bar-fill" id="bar-fill"></div><div class="bar-pct" id="bar-pct">0 %</div></div>
+                <div class="progress-meta">
+                    <span id="p-counts">0 / 0</span>
+                    <span id="p-rate">— /s</span>
+                    <span class="eta" id="p-eta">eta --:--</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ============= colorful footer telemetry strip ============= -->
+<footer class="footer-strip" title="Live system telemetry.">
+    <div class="mini-stat tele-cpu">
+        <span class="mini-h">CPU</span>
+        <div class="mini-seg" id="stat-cpu"></div>
+        <span class="mini-v" id="stat-cpu-v">--%</span>
+    </div>
+    <div class="mini-stat tele-ram">
+        <span class="mini-h">RAM</span>
+        <div class="mini-seg" id="stat-ram"></div>
+        <span class="mini-v" id="stat-ram-v">--%</span>
+    </div>
+    <div class="mini-stat tele-gpu" id="stat-gpu-box" style="display:none">
+        <span class="mini-h">GPU</span>
+        <div class="mini-seg" id="stat-gpu"></div>
+        <span class="mini-v" id="stat-gpu-v">--%</span>
+    </div>
+    <div class="mini-stat tele-vram" id="stat-vram-box" style="display:none">
+        <span class="mini-h">VRAM</span>
+        <div class="mini-seg" id="stat-vram"></div>
+        <span class="mini-v" id="stat-vram-v">--%</span>
+    </div>
+</footer>
+
+<!-- ============= COMPILE settings modal ============= -->
+<div class="modal-backdrop" id="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <header class="modal-h">
+            <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                <rect x="1" y="3" width="14" height="10" fill="#6cffb4" opacity="0.2"/>
+                <rect x="1" y="3" width="14" height="2" fill="#6cffb4"/>
+                <rect x="3" y="3" width="1" height="2" fill="#000"/>
+                <rect x="6" y="3" width="1" height="2" fill="#000"/>
+                <rect x="9" y="3" width="1" height="2" fill="#000"/>
+                <rect x="12" y="3" width="1" height="2" fill="#000"/>
+                <polygon points="6,7 6,11 11,9" fill="#6cffb4"/>
+            </svg>
+            <span id="modal-title">COMPILE SETTINGS</span>
+            <span class="status-pill" id="modal-status">CHECKING…</span>
+            <button class="modal-x" id="modal-close" title="Close" aria-label="Close">×</button>
+        </header>
+
+        <div class="modal-body">
+            <div class="modal-pool" id="modal-pool">checking indexed pool…</div>
+
+            <div class="row" title="How many videos play at once.">
+                <span class="row-label">grid size</span>
+                <span class="row-spacer"></span>
+                <select id="o-grid">
+                    <option value="3">3 × 3 — 9 cells</option>
+                    <option value="4">4 × 4 — 16 cells</option>
+                    <option value="5">5 × 5 — 25 cells</option>
+                    <option value="6">6 × 6 — 36 cells</option>
+                    <option value="7">7 × 7 — 49 cells</option>
+                    <option value="8">8 × 8 — 64 cells</option>
+                    <option value="9">9 × 9 — 81 cells</option>
+                    <option value="10">10 × 10 — 100 cells</option>
+                </select>
+            </div>
+            <div class="desc">More cells = more videos on screen, smaller each. 3 × 3 is calm. 6 × 6 is busy.</div>
+
+            <label class="check" title="Start with 1 video and progressively increase density up to the selected grid size. Sequence: 1→2→2→3→3→4→…→N.">
+                <input type="checkbox" id="o-ramp">
+                <span class="check-label">grid ramp</span>
+                <span class="ramp-badge">1→N</span>
+            </label>
+            <div class="desc ramp-desc" id="ramp-preview"></div>
+
+            <div class="slider-group" title="Total length of the final compilation video.">
+                <div class="slider-head">
+                    <span class="row-label">total length</span>
+                    <span class="slider-val" id="o-total-val">120s</span>
+                </div>
+                <input type="range" id="o-total" min="5" max="600" value="120" step="5" class="slider">
+                <div class="slider-range"><span id="o-total-min">5s</span><span id="o-total-max">600s</span></div>
+            </div>
+            <div class="desc" id="o-total-hint">How long the finished video will be, in seconds.</div>
+
+            <div class="slider-group" title="How often the clips in each cell change.">
+                <div class="slider-head">
+                    <span class="row-label">swap interval</span>
+                    <span class="slider-val" id="o-swap-val">5s</span>
+                </div>
+                <input type="range" id="o-swap" min="1" max="20" value="5" step="1" class="slider">
+                <div class="slider-range"><span>1s</span><span>20s</span></div>
+            </div>
+            <div class="desc">How often clips change. Lower = faster cuts, busier feel.</div>
+
+            <div class="overlay-box" title="Per-cell decorations baked into the output video.">
+                <div class="overlay-h">CELL OVERLAY</div>
+                <div class="overlay-row">
+                    <label class="overlay-toggle" title="Draw a thin outline around each cell.">
+                        <input type="checkbox" id="o-border" checked>
+                        <span>border</span>
+                    </label>
+                    <label class="overlay-toggle" title="Overlay the source filename inside each cell.">
+                        <input type="checkbox" id="o-fname" checked>
+                        <span>name</span>
+                    </label>
+                    <label class="overlay-toggle" title="Overlay the file's year next to the filename.">
+                        <input type="checkbox" id="o-year" checked>
+                        <span>year</span>
+                    </label>
+                </div>
+            </div>
+
+            <label class="check" title="Never use the same clip twice across the entire compilation. If the pool is too small, remaining cells are filled with repeats.">
+                <input type="checkbox" id="o-norepeat">
+                <span class="check-label">no repeat clips</span>
+            </label>
+
+            <div class="audio-mode-box">
+                <div class="audio-mode-h">AUDIO</div>
+                <div class="audio-mode-bar">
+                    <button class="audio-btn active" data-mode="all" title="Play audio from all clips simultaneously.">ALL</button>
+                    <button class="audio-btn" data-mode="mute" title="Strip all audio. Output will be silent.">MUTE</button>
+                    <button class="audio-btn" data-mode="solo" title="One clip's audio at a time, cycling through the grid with a gold highlight.">SOLO</button>
+                </div>
+                <div class="audio-desc" id="audio-mode-desc">Play audio from all clips simultaneously.</div>
+            </div>
+
+            <label class="check" title="Open the finished video automatically when the render completes.">
+                <input type="checkbox" id="o-autoopen" checked>
+                <span class="check-label">auto-open when done</span>
+            </label>
+
+            <div class="modal-est" id="modal-est"></div>
+            <div class="modal-coverage" id="modal-coverage"></div>
+            <div class="modal-warn" id="modal-warn" hidden></div>
+        </div>
+
+        <footer class="modal-foot">
+            <button class="btn ghost" id="modal-cancel">CANCEL</button>
+            <button class="btn subtle" id="modal-recommend" title="Snap to the largest grid + length that fits the indexed pool without repetition.">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                    <polygon points="8,1 10,6 15,6 11,9 13,15 8,11 3,15 5,9 1,6 6,6" fill="currentColor"/>
+                </svg>
+                <span>RECOMMENDED</span>
+            </button>
+            <button class="btn compile" id="modal-render">
+                <svg class="ico" viewBox="0 0 16 16" aria-hidden="true">
+                    <polygon points="3,2 14,8 3,14" fill="currentColor"/>
+                </svg>
+                <span>RENDER</span>
+            </button>
+        </footer>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

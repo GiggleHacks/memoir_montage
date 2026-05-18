@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compilation-maker"
+version = "0.11.1"
+description = "Generate NxN simultaneous-playback video collages from a folder of personal videos, with smart pre-filtering."
+requires-python = ">=3.10"
+authors = [{ name = "qx" }]
+dependencies = [
+    "pywebview>=5.0",
+    "nudenet>=3.4.2",
+    "onnxruntime>=1.16",
+    "imageio-ffmpeg>=0.5",
+    "mediapipe>=0.10",
+    "psutil>=5.9",
+    "numpy>=1.26,<3.0",
+    "requests>=2.31",
+    "silero-vad>=5.0",
+    "torch>=2.0",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+nvidia = ["pynvml>=11.5", "onnxruntime-gpu>=1.16"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+compilation-maker = "compilation_maker.__main__:main"
+compilation-maker-cli = "compilation_maker.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["compilation_maker*"]
+
+[tool.setuptools.package-data]
+compilation_maker = ["web/**/*", "assets/**/*"]
